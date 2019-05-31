@@ -24,15 +24,17 @@ beerfile = filepath + 'beers.csv'
 breweryfile = filepath + 'breweries.csv'
 brewerygeofile = filepath + 'breweries_geocode.csv'
 
-ftbeerindex = 'beerIdx'
-breweryidx = 'breweryIdx'
+ftbeeridx = 'beerIdx'
+ftbreweryidx = 'breweryIdx'
 
 # function to check if index exists and if yes drop them
-def clean_index(r):
-    client = Client(ftbeerindex)
-    client.drop_index()
-    client = Client(breweryidx)
-    client.drop_index()
+def clean_index(index):
+    client = Client(index)
+    try:
+        client.drop_index()
+    except:
+        print ("\tWARN: index {} does not exist".format(index))
+    
 
 # function to take a csv file and import each line
 # as a redis hash
@@ -65,7 +67,7 @@ def import_brewery_geo(r):
 
     # FT.CREATE
     ftcreatecmd = [
-        'FT.CREATE', breweryidx, 'SCHEMA',
+        'FT.CREATE', ftbreweryidx, 'SCHEMA',
         'name', 'TEXT', 'WEIGHT', '5.0',
         'address', 'TEXT',
         'city', 'TEXT',
@@ -97,7 +99,7 @@ def import_brewery_geo(r):
 
             # FT.ADD the brewery location data to the redisearch brewery index
             ftaddcmd = [
-                'FT.ADD', breweryidx, "ftbrewery:{}".format(row[1]),
+                'FT.ADD', ftbreweryidx, "ftbrewery:{}".format(row[1]),
                 '1.0', 'FIELDS',
                 'name', binfo[b'name'],
                 'address', binfo[b'address1'],
@@ -118,7 +120,7 @@ def ftadd_beers(r):
 
     # FT.CREATE
     ftcreatecmd = [
-        'FT.CREATE', ftbeerindex, 'SCHEMA',
+        'FT.CREATE', ftbeeridx, 'SCHEMA',
         'name', 'TEXT', 'WEIGHT', '5.0',
         'brewery', 'TEXT',
         'category', 'TAG',
@@ -136,7 +138,7 @@ def ftadd_beers(r):
         for row in beers:
             # we will be generating the full FT.ADD command as a list
             # then pass the whole list to redis.execute_command()
-            ftaddcmd = ['FT.ADD', ftbeerindex]
+            ftaddcmd = ['FT.ADD', ftbeeridx]
 
             if beers.line_num == 1:
                 header = row
@@ -205,8 +207,9 @@ def ftadd_beers(r):
 def main():
 
     r = redis.StrictRedis(**redis_connection)
-    print("drop index")
-    clean_index(r)
+    for index in [ftbeeridx, ftbreweryidx]:
+        print("dropping index {}".format(index))
+        clean_index(index)
     print ("Importing categories...")
     import_csv(r, category, catfile)
     print ("Importing styles...")
