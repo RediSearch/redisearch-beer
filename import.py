@@ -3,7 +3,7 @@
 
 import redis
 import csv
-from redisearch import Client, TextField, NumericField,TagField, Query, AutoCompleter, Suggestion
+from redisearch import Client, TextField, NumericField, TagField, GeoField
 # import pprint
 
 redis_connection = {
@@ -27,9 +27,10 @@ brewerygeofile = filepath + 'breweries_geocode.csv'
 ftbeeridx = 'beerIdx'
 ftbreweryidx = 'breweryIdx'
 
-# function to check if index exists and if yes drop them
-def clean_index(index):
-    client = Client(index)
+# function to drop indexes if they exist
+# argument is a redisearch client
+def clean_index(client):
+    
     try:
         client.drop_index()
     except:
@@ -43,12 +44,15 @@ def get_beer_doc_score(indicator):
     
     # cannot have score greater than 1.0
     if indicator > 1:
-        return '1.0'
+        return 1.0
 
-    return str(indicator)
+    return indicator
 
 # function to take a csv file and import each line
 # as a redis hash
+# arguments: redis client
+#            keyprefix (string)
+#            csv file name (string)
 def import_csv(r, keyprefix, importfile):
     header = []
     with open(importfile) as csvfile:
@@ -74,19 +78,19 @@ def import_csv(r, keyprefix, importfile):
 
 # function to create the brewey redisearch index
 # and add each brewery location info as a document in the index
-def import_brewery_geo(r):
+# arguments: redis client and redisearch client on the brewery index
+def import_brewery_geo(r, rsclient):
 
-    # FT.CREATE
-    ftcreatecmd = [
-        'FT.CREATE', ftbreweryidx, 'SCHEMA',
-        'name', 'TEXT', 'WEIGHT', '5.0',
-        'address', 'TEXT',
-        'city', 'TEXT',
-        'state', 'TEXT',
-        'country', 'TEXT',
-        'location', 'GEO'
+    # create the brewery redisearch index
+    ftidxfields = [
+        TextField('name', weight=5.0),
+        TextField('address'),
+        TextField('city'),
+        TextField('state'),
+        TextField('country'),
+        GeoField('location')
     ]
-    r.execute_command(*ftcreatecmd)
+    rsclient.create_index([*ftidxfields])
 
     with open(brewerygeofile) as geofile:
         geo = csv.reader(geofile)
@@ -98,58 +102,57 @@ def import_brewery_geo(r):
             # use the brewery id to generate the brewery key added earlier
             brewery_key = "{}:{}".format(brewery, row[1])
 
-            # geo_key = "{}:{}".format('brewerygeo', row[1])
-            # r.geoadd(geo_key, row[3], row[2])
-
             # get all the data from the brewery hash
             binfo = r.hgetall(brewery_key)
-            # pprint.pprint(binfo)
+            
             if not (any(binfo)):
                 print ("\tERROR: Missing info for {}, skipping geo import".format(brewery_key))
                 continue
 
-            # FT.ADD the brewery location data to the redisearch brewery index
-            ftaddcmd = [
-                'FT.ADD', ftbreweryidx, "ftbrewery:{}".format(row[1]),
-                '1.0', 'FIELDS',
-                'name', binfo[b'name'],
-                'address', binfo[b'address1'],
-                'city', binfo[b'city'],
-                'state', binfo[b'state'],
-                'country', binfo[b'country'],
-                'location', row[3] + ' ' + row[2]
-            ]
+            # add the brewery document to the index
+            ftaddfields = {
+                'name': binfo[b'name'].decode(),
+                'address': binfo[b'address1'].decode(),
+                'city': binfo[b'city'].decode(),
+                'state': binfo[b'state'].decode(),
+                'country': binfo[b'country'].decode(),
+                'location': "{},{}".format(row[3], row[2])
+            }
             try:
-                r.execute_command(*ftaddcmd)
+                rsclient.add_document(
+                    "ftbrewery:{}".format(row[1]),
+                    score=1.0,
+                    **ftaddfields
+                )
             except Exception as e:
-                print ("\tERROR: Failed to add geo for {}: {}".format(brewery_key, e))
+                print ("\tERROR: Failed to add document for {}: {}".format(brewery_key, e))
                 continue
 
 # function to create the beer redisearch index
 # and add each beer as a document to the index
-def ftadd_beers(r):
+# arguments: a redis client and a redisearch client on the beer index
+def ftadd_beers(r, rsclient):
 
-    # FT.CREATE
-    ftcreatecmd = [
-        'FT.CREATE', ftbeeridx, 'SCHEMA',
-        'name', 'TEXT', 'WEIGHT', '5.0',
-        'brewery', 'TEXT',
-        'category', 'TAG',
-        'style', 'TEXT',
-        'description', 'TEXT',
-        'abv', 'NUMERIC', 'SORTABLE',
-        'ibu', 'NUMERIC', 'SORTABLE'
+    # create beer index
+    ftidxfields = [
+        TextField('name', weight=5.0),
+        TextField('brewery'),
+        TagField('category'),
+        TextField('style'),
+        TextField('description'),
+        NumericField('abv', sortable=True),
+        NumericField('ibu', sortable=True)
     ]
-    r.execute_command(*ftcreatecmd)
+    rsclient.create_index([*ftidxfields])
 
     header = []
     dontadd = 0
     with open(beerfile) as csvfile:
         beers = csv.reader(csvfile)
         for row in beers:
-            # we will be generating the full FT.ADD command as a list
-            # then pass the whole list to redis.execute_command()
-            ftaddcmd = ['FT.ADD', ftbeeridx]
+            docid = ''
+            docscore = 1.0
+            ftaddfields = {}
 
             if beers.line_num == 1:
                 header = row
@@ -157,8 +160,7 @@ def ftadd_beers(r):
 
             for idx, field in enumerate(row):
                 if idx == 0:
-                    ftaddcmd.append("{}:{}".format(beer, field))
-                    ftaddcmd.extend(["1.0", "FIELDS"])
+                    docid = "{}:{}".format(beer, field)
                     continue
 
                 # idx 1 is brewery name
@@ -170,12 +172,12 @@ def ftadd_beers(r):
                         dontadd = 1
                         break
                     bkey = "{}:{}".format(brewery, field)
-                    ftaddcmd.extend(['brewery', r.hget(bkey, 'name')])
+                    ftaddfields['brewery'] = r.hget(bkey, 'name')
 
                 # idx 2 is beer name
                 elif idx == 2:
 
-                    ftaddcmd.extend(['name', field])
+                    ftaddfields['name'] = field
 
                 # idx 3 is category ID
                 elif idx == 3:
@@ -186,7 +188,7 @@ def ftadd_beers(r):
                         ckey = "{}:{}".format(category, field)
                         catname = r.hget(ckey, 'cat_name')
 
-                    ftaddcmd.extend(['category', catname])
+                    ftaddfields['category'] = catname
 
                 # idx 4 is style ID
                 elif idx == 4:
@@ -196,37 +198,45 @@ def ftadd_beers(r):
                     if int(field) != -1:
                         skey = "{}:{}".format(style, field)
                         stylename = r.hget(skey, 'style_name')
-                    ftaddcmd.extend(['style', stylename])
+                    
+                    ftaddfields['style'] = stylename
 
                 # idx 5 is ABV
                 elif idx == 5:
 
-                    ftaddcmd.extend(['abv', field])
+                    ftaddfields['abv'] = field
 
                     # update the document score based on ABV
-                    # ftaddcmd[3] is the score (currently set to 1.0)
-                    # we update it here to some number based on ABV
-                    ftaddcmd[3] = get_beer_doc_score(field)
-                    print ("\tDEBUG: doc score {}".format(ftaddcmd[3]))
+                    docscore = get_beer_doc_score(field)
 
                 # idx 6 is IBU
                 elif idx == 6:
 
-                    ftaddcmd.extend(['ibu', field])
+                    ftaddfields['ibu'] = field
 
             if dontadd:
                 dontadd = 0
                 continue
 
-            # FT.ADD
-            r.execute_command(*ftaddcmd)
+            # add beer document
+            rsclient.add_document(docid, score=docscore, **ftaddfields)
 
 def main():
 
     r = redis.StrictRedis(**redis_connection)
-    for index in [ftbeeridx, ftbreweryidx]:
-        print("dropping index {}".format(index))
-        clean_index(index)
+    rsbeer = Client(ftbeeridx, **redis_connection)
+    rsbrewery = Client(ftbreweryidx, **redis_connection)
+    
+    for rsclient in [rsbeer, rsbrewery]:
+        try:
+            cinfo = rsclient.info()
+        except:
+            continue
+
+    
+        print("dropping index {}".format(cinfo['index_name']))
+        clean_index(rsclient)
+    
     print ("Importing categories...")
     import_csv(r, category, catfile)
     print ("Importing styles...")
@@ -234,9 +244,9 @@ def main():
     print ("Importing breweries...")
     import_csv(r, brewery, breweryfile)
     print ("Adding brewery geo data to RediSearch...")
-    import_brewery_geo(r)
+    import_brewery_geo(r, rsbrewery)
     print ("Adding beer data to RediSearch...")
-    ftadd_beers(r)
+    ftadd_beers(r, rsbeer)
     print ("Done.")
 
 if __name__=="__main__":
