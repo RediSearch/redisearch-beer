@@ -34,7 +34,18 @@ def clean_index(index):
         client.drop_index()
     except:
         print ("\tWARN: index {} does not exist".format(index))
+
+# function to generate a document score. the indicator
+# argument is used to generate a score
+# (currently abv / 10)
+def get_beer_doc_score(indicator):
+    indicator = float(indicator) / 10
     
+    # cannot have score greater than 1.0
+    if indicator > 1:
+        return '1.0'
+
+    return str(indicator)
 
 # function to take a csv file and import each line
 # as a redis hash
@@ -191,6 +202,12 @@ def ftadd_beers(r):
                 elif idx == 5:
 
                     ftaddcmd.extend(['abv', field])
+
+                    # update the document score based on ABV
+                    # ftaddcmd[3] is the score (currently set to 1.0)
+                    # we update it here to some number based on ABV
+                    ftaddcmd[3] = get_beer_doc_score(field)
+                    print ("\tDEBUG: doc score {}".format(ftaddcmd[3]))
 
                 # idx 6 is IBU
                 elif idx == 6:
