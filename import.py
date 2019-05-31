@@ -27,15 +27,6 @@ brewerygeofile = filepath + 'breweries_geocode.csv'
 ftbeeridx = 'beerIdx'
 ftbreweryidx = 'breweryIdx'
 
-# function to drop indexes if they exist
-# argument is a redisearch client
-def clean_index(client):
-    
-    try:
-        client.drop_index()
-    except:
-        print ("\tWARN: index {} does not exist".format(index))
-
 # function to generate a document score. the indicator
 # argument is used to generate a score
 # (currently abv / 10)
@@ -235,7 +226,7 @@ def main():
 
     
         print("dropping index {}".format(cinfo['index_name']))
-        clean_index(rsclient)
+        rsclient.drop_index()
     
     print ("Importing categories...")
     import_csv(r, category, catfile)
