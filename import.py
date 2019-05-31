@@ -3,6 +3,7 @@
 
 import redis
 import csv
+from redisearch import Client, TextField, NumericField,TagField, Query, AutoCompleter, Suggestion
 # import pprint
 
 redis_connection = {
@@ -26,6 +27,13 @@ brewerygeofile = filepath + 'breweries_geocode.csv'
 ftbeerindex = 'beerIdx'
 breweryidx = 'breweryIdx'
 
+# function to check if index exists and if yes drop them
+def clean_index(r):
+    client = Client(ftbeerindex)
+    client.drop_index()
+    client = Client(breweryidx)
+    client.drop_index()
+
 # function to take a csv file and import each line
 # as a redis hash
 def import_csv(r, keyprefix, importfile):
@@ -35,13 +43,13 @@ def import_csv(r, keyprefix, importfile):
         keyname = ''
         header = ''
         for row in reader:
-            
+
             if reader.line_num == 1:
                 # column headers in the first line of the csv file.
                 # we will use these for the field names in the redis hash
                 header = row
                 continue
-            
+
             for idx, field in enumerate(row):
                 if idx == 0:
                     # set the key name using the first column (id)
@@ -54,7 +62,7 @@ def import_csv(r, keyprefix, importfile):
 # function to create the brewey redisearch index
 # and add each brewery location info as a document in the index
 def import_brewery_geo(r):
-    
+
     # FT.CREATE
     ftcreatecmd = [
         'FT.CREATE', breweryidx, 'SCHEMA',
@@ -120,7 +128,7 @@ def ftadd_beers(r):
         'ibu', 'NUMERIC', 'SORTABLE'
     ]
     r.execute_command(*ftcreatecmd)
-    
+
     header = []
     dontadd = 0
     with open(beerfile) as csvfile:
@@ -129,20 +137,20 @@ def ftadd_beers(r):
             # we will be generating the full FT.ADD command as a list
             # then pass the whole list to redis.execute_command()
             ftaddcmd = ['FT.ADD', ftbeerindex]
-            
+
             if beers.line_num == 1:
                 header = row
                 continue
-            
+
             for idx, field in enumerate(row):
                 if idx == 0:
                     ftaddcmd.append("{}:{}".format(beer, field))
                     ftaddcmd.extend(["1.0", "FIELDS"])
                     continue
-                
+
                 # idx 1 is brewery name
                 if idx == 1:
-                    
+
                     if field == "":
                         # something is wrong with the csv, skip this line.
                         print ("\tEJECTING: {}".format(row))
@@ -150,15 +158,15 @@ def ftadd_beers(r):
                         break
                     bkey = "{}:{}".format(brewery, field)
                     ftaddcmd.extend(['brewery', r.hget(bkey, 'name')])
-                
+
                 # idx 2 is beer name
                 elif idx == 2:
-                    
+
                     ftaddcmd.extend(['name', field])
-                
+
                 # idx 3 is category ID
                 elif idx == 3:
-                    
+
                     catname = 'None'
                     if int(field) != -1:
                         # get the category key and hget the name of the category
@@ -166,37 +174,39 @@ def ftadd_beers(r):
                         catname = r.hget(ckey, 'cat_name')
 
                     ftaddcmd.extend(['category', catname])
-                
+
                 # idx 4 is style ID
                 elif idx == 4:
-                    
+
                     stylename = 'None'
-                    
+
                     if int(field) != -1:
                         skey = "{}:{}".format(style, field)
                         stylename = r.hget(skey, 'style_name')
                     ftaddcmd.extend(['style', stylename])
-                
+
                 # idx 5 is ABV
                 elif idx == 5:
-                    
+
                     ftaddcmd.extend(['abv', field])
-                
+
                 # idx 6 is IBU
                 elif idx == 6:
-                    
+
                     ftaddcmd.extend(['ibu', field])
 
             if dontadd:
                 dontadd = 0
                 continue
-            
+
             # FT.ADD
             r.execute_command(*ftaddcmd)
 
 def main():
 
     r = redis.StrictRedis(**redis_connection)
+    print("drop index")
+    clean_index(r)
     print ("Importing categories...")
     import_csv(r, category, catfile)
     print ("Importing styles...")
