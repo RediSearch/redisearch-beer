@@ -121,7 +121,7 @@ def ftadd_beers(r):
         'FT.CREATE', ftbeerindex, 'SCHEMA',
         'name', 'TEXT', 'WEIGHT', '5.0',
         'brewery', 'TEXT',
-        'category', 'TEXT',
+        'category', 'TAG',
         'style', 'TEXT',
         'description', 'TEXT',
         'abv', 'NUMERIC', 'SORTABLE',
