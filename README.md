@@ -16,7 +16,7 @@ All beers with ABV higher than 5% but lower than 6%:
 
 `ft.search beerIdx @abv:"[5 6]"`
 
-Breweies in a 10km radius from the coordinates of Chicago, IL USA:
+Breweries in a 10km radius of the coordinates of Chicago, IL USA:
 
 `ft.search breweryIdx "@location:[-87.623177 41.881832 10 km]"`
 
