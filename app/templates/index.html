@@ -1,0 +1,85 @@
+<html>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 5px;
+            text-align: left;    
+        }
+        pre, code {
+            font-family: monospace, monospace;
+        }
+        pre {
+            overflow: auto;
+        }
+        pre > code {
+            display: block;
+            /* padding: 1rem; */
+            word-wrap: normal;
+        }
+    </style>
+    <head>
+        {% if title %}
+        <title>{{ title }} - RediSearch Beer</title>
+        {% else %}
+        <title>Welcome to RediSearch Beer</title>
+        {% endif %}
+    </head>
+    <body>
+        <h1>RediSearch Beer</h1>
+        {% if rsindex and rsquery %}
+        <table>
+            <tr>
+                <th>RediSearch Index:</th>
+                <td><code>{{ rsindex }}</code></td>
+            </tr>
+            <tr>
+                <th>RediSearch Query:</th>
+                <td><code>{{ rsquery }}</code></td>
+            </tr>
+            <tr>
+                <th>redis-cli Command:</th>
+                <td><code>FT.SEARCH {{ rsindex }} {{ rsquery }}</code></td>
+            </tr>
+        </table>
+        {% endif %}
+        
+        <h2>Query Results</h2>
+        <h3>{{ result.total }} Document{% if result.total != 1 %}s{% endif %}</h3>
+        <table>
+
+            {% for beer in result.docs %}
+            
+            <tr>
+                <th>{{ beer.id }}</th>
+                
+            </tr>
+            <tr>
+                <td>Name</td>
+                <td>{{ beer.name }}</td>
+            </tr>
+            <tr>
+                <td>Brewery</td>
+                <td>{{ beer.brewery }}</td>
+            </tr>
+                
+            {% if beer.abv != '0' %}
+            <tr>
+                <td>ABV</td>
+                <td>{{ beer.abv }}</td>
+            </tr>
+            {% endif %}
+            {% if beer.ibu != '0' %}
+            <tr>
+                <td>IBU</td>
+                <td>{{ beer.ibu }}</td>
+            </tr>
+            {% endif %}
+            
+            {% endfor %}
+        </table>
+    </body>
+</html>
+
