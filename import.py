@@ -1,14 +1,17 @@
 # small script to import the openbeerdb data to
 # Redis using RediSearch
 
+import os
+from dotenv import load_dotenv
 import redis
 import csv
 from redisearch import Client, TextField, NumericField, TagField, GeoField
-# import pprint
+
+load_dotenv()
 
 redis_connection = {
-    'host': 'localhost',
-    'port': 6379
+    'host': os.getenv('REDIS_HOST') or 'localhost',
+    'port': os.getenv('REDIS_PORT') or 6379
 }
 
 category = 'category'
@@ -215,8 +218,8 @@ def ftadd_beers(r, rsclient):
 def main():
 
     r = redis.StrictRedis(**redis_connection)
-    rsbeer = Client(ftbeeridx, **redis_connection)
-    rsbrewery = Client(ftbreweryidx, **redis_connection)
+    rsbeer = Client(ftbeeridx, conn=r)
+    rsbrewery = Client(ftbreweryidx, conn=r)
     
     for rsclient in [rsbeer, rsbrewery]:
         try:
