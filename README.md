@@ -21,3 +21,7 @@ Breweries in a 10km radius of the coordinates of Chicago, IL USA:
 `ft.search breweryIdx "@location:[-87.623177 41.881832 10 km]"`
 
 The beers are added to the RediSearch index weighted by ABV. So by default, the results will be ordered by ABV highest to lowest. Both ABV and IBU are sortable, so you can order results by either of these fields using `sortby` in the query.
+
+There is a rudimentary flask front end to show search functionality. To run it, run:
+`flask run`
+And then access the UI by pointing a web browser at http://127.0.0.1:5000/
