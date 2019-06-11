@@ -1,3 +1,7 @@
 redis==3.0.1
 redisearch==0.7.1
 python-dotenv==0.10.3
+Flask==1.0.2
+Flask-WTF==0.14.2
+Jinja2==2.10
+WTForms==2.2.1
