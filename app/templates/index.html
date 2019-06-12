@@ -46,38 +46,24 @@
         </table>
         {% endif %}
         
-        <h2>Query Results</h2>
-        <h3>{{ result.total }} Document{% if result.total != 1 %}s{% endif %}</h3>
+        <h2>Search Results</h2>
+        <h3>{{ count }} Document{% if count != 1 %}s{% endif %} found in {{ duration }} ms.</h3>
         <table>
 
-            {% for beer in result.docs %}
+            {% for beer in result %}
             
             <tr>
-                <th>{{ beer.id }}</th>
+                <th>{{ beer['id'] }}</th>
                 
             </tr>
+                {% for k, v in beer.items() %}
+                    {% if k != 'id' and k != 'payload' %}
             <tr>
-                <td>Name</td>
-                <td>{{ beer.name }}</td>
+                <td>{{ k }}</td>
+                <td>{{ v }}</td>
             </tr>
-            <tr>
-                <td>Brewery</td>
-                <td>{{ beer.brewery }}</td>
-            </tr>
-                
-            {% if beer.abv != '0' %}
-            <tr>
-                <td>ABV</td>
-                <td>{{ beer.abv }}</td>
-            </tr>
-            {% endif %}
-            {% if beer.ibu != '0' %}
-            <tr>
-                <td>IBU</td>
-                <td>{{ beer.ibu }}</td>
-            </tr>
-            {% endif %}
-            
+                    {% endif %}
+                {% endfor %}
             {% endfor %}
         </table>
     </body>
