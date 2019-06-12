@@ -82,6 +82,7 @@ def import_brewery_geo(r, rsclient):
         TextField('city'),
         TextField('state'),
         TextField('country'),
+        NumericField('id', sortable=True),
         GeoField('location')
     ]
     rsclient.create_index([*ftidxfields])
@@ -110,11 +111,12 @@ def import_brewery_geo(r, rsclient):
                 'city': binfo[b'city'].decode(),
                 'state': binfo[b'state'].decode(),
                 'country': binfo[b'country'].decode(),
+                'id': row[1],
                 'location': "{},{}".format(row[3], row[2])
             }
             try:
                 rsclient.add_document(
-                    "ftbrewery:{}".format(row[1]),
+                    "brewery:{}".format(row[1]),
                     score=1.0,
                     **ftaddfields
                 )
@@ -131,11 +133,15 @@ def ftadd_beers(r, rsclient):
     ftidxfields = [
         TextField('name', weight=5.0),
         TextField('brewery'),
-        TagField('category'),
+        NumericField('breweryid', sortable=True),
+        TextField('category'),
+        NumericField('categoryid'),
         TextField('style'),
+        NumericField('styleid'),
         TextField('description'),
         NumericField('abv', sortable=True),
-        NumericField('ibu', sortable=True)
+        NumericField('ibu', sortable=True),
+        TagField('favorite')
     ]
     rsclient.create_index([*ftidxfields])
 
@@ -167,6 +173,7 @@ def ftadd_beers(r, rsclient):
                         break
                     bkey = "{}:{}".format(brewery, field)
                     ftaddfields['brewery'] = r.hget(bkey, 'name')
+                    ftaddfields['breweryid'] = field
 
                 # idx 2 is beer name
                 elif idx == 2:
@@ -183,6 +190,7 @@ def ftadd_beers(r, rsclient):
                         catname = r.hget(ckey, 'cat_name')
 
                     ftaddfields['category'] = catname
+                    ftaddfields['categoryid'] = field
 
                 # idx 4 is style ID
                 elif idx == 4:
@@ -194,6 +202,7 @@ def ftadd_beers(r, rsclient):
                         stylename = r.hget(skey, 'style_name')
                     
                     ftaddfields['style'] = stylename
+                    ftaddfields['styleid'] = field
 
                 # idx 5 is ABV
                 elif idx == 5:
