@@ -11,7 +11,8 @@ load_dotenv()
 
 redis_connection = {
     'host': os.getenv('REDIS_HOST') or 'localhost',
-    'port': os.getenv('REDIS_PORT') or 6379
+    'port': os.getenv('REDIS_PORT') or 6379,
+    'password': os.getenv('REDIS_PASSWORD') or ''
 }
 
 category = 'category'

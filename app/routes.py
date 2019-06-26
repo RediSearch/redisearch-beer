@@ -1,6 +1,7 @@
 from app import app
 from flask import render_template, Flask, g
 from redisearch import Client, Query
+from app.forms import SearchForm
 import redis
 
 def docs_to_dict(docs):
@@ -18,7 +19,8 @@ def docs_to_dict(docs):
 def before_request():
     g.redis = redis.StrictRedis(
         host=app.config['REDIS_HOST'],
-        port=app.config['REDIS_PORT']
+        port=app.config['REDIS_PORT'],
+        password=app.config['REDIS_PASSWORD']
     )
     g.rsbeer = Client(
         'beerIdx',
