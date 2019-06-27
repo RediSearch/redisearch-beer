@@ -1,7 +1,7 @@
 from app import app
 from flask import render_template, Flask, g
 from redisearch import Client, Query
-from app.forms import SearchForm
+# from app.forms import SearchForm
 import redis
 
 def docs_to_dict(docs):
