@@ -1,6 +1,8 @@
 # small script to import the openbeerdb data to
 # Redis using RediSearch
 
+import argparse
+from urllib.parse import urlparse
 import os
 from dotenv import load_dotenv
 import redis
@@ -9,18 +11,12 @@ from redisearch import Client, TextField, NumericField, TagField, GeoField
 
 load_dotenv()
 
-redis_connection = {
-    'host': os.getenv('REDIS_HOST') or 'localhost',
-    'port': os.getenv('REDIS_PORT') or 6379,
-    'password': os.getenv('REDIS_PASSWORD') or ''
-}
-
 category = 'category'
 style = 'style'
 beer = 'beer'
 brewery = 'brewery'
 
-filepath = './'
+filepath = './data/'
 
 catfile = filepath + 'categories.csv'
 stylefile = filepath + 'styles.csv'
@@ -36,7 +32,7 @@ ftbreweryidx = 'breweryIdx'
 # (currently abv / 10)
 def get_beer_doc_score(indicator):
     indicator = float(indicator) / 10
-    
+
     # cannot have score greater than 1.0
     if indicator > 1:
         return 1.0
@@ -100,7 +96,7 @@ def import_brewery_geo(r, rsclient):
 
             # get all the data from the brewery hash
             binfo = r.hgetall(brewery_key)
-            
+
             if not (any(binfo)):
                 print ("\tERROR: Missing info for {}, skipping geo import".format(brewery_key))
                 continue
@@ -201,7 +197,7 @@ def ftadd_beers(r, rsclient):
                     if int(field) != -1:
                         skey = "{}:{}".format(style, field)
                         stylename = r.hget(skey, 'style_name')
-                    
+
                     ftaddfields['style'] = stylename
                     ftaddfields['styleid'] = field
 
@@ -226,21 +222,28 @@ def ftadd_beers(r, rsclient):
             rsclient.add_document(docid, score=docscore, **ftaddfields)
 
 def main():
+    # Parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-u', '--url', help='Redis URL', type=str, default='redis://127.0.0.1:6379')
+    args = parser.parse_args()
 
-    r = redis.StrictRedis(**redis_connection)
+    # Set up Redis connection
+    url = urlparse(args.url)
+    r = redis.StrictRedis(host=url.hostname, port=url.port)
+
     rsbeer = Client(ftbeeridx, conn=r)
     rsbrewery = Client(ftbreweryidx, conn=r)
-    
+
     for rsclient in [rsbeer, rsbrewery]:
         try:
             cinfo = rsclient.info()
         except:
             continue
 
-    
+
         print("dropping index {}".format(cinfo['index_name']))
         rsclient.drop_index()
-    
+
     print ("Importing categories...")
     import_csv(r, category, catfile)
     print ("Importing styles...")

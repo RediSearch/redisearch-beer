@@ -20,7 +20,6 @@ def before_request():
     g.redis = redis.StrictRedis(
         host=app.config['REDIS_HOST'],
         port=app.config['REDIS_PORT'],
-        password=app.config['REDIS_PASSWORD']
     )
     g.rsbeer = Client(
         'beerIdx',
@@ -48,6 +47,3 @@ def index():
         rsquery=q.query_string(),
         result=res
     )
-
-            
-
