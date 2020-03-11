@@ -14,8 +14,14 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Run the Docker image
-      run: docker-compose up
+    - name: Run the docker-compose
+      run: docker-compose up -d
+    - name: Sleep
+      uses: jakejarvis/wait-action@master
+      with:
+        time: '60s'
+    - name: Check running containers
+      run: docker ps
     - name: Test
       run: |
         cd test
