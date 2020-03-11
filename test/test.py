@@ -1,4 +1,3 @@
-from rmtest import BaseModuleTestCase
 import redis
 import unittest
 
