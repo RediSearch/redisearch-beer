@@ -3,7 +3,6 @@
 
 import argparse
 from urllib.parse import urlparse
-import os
 from dotenv import load_dotenv
 import redis
 import csv
