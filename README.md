@@ -29,7 +29,7 @@ FT.SEARCH beerIdx "@category:Irish Ale|German Ale @abv:[9 inf]"
 ```
 All beers with ABV higher than 5% but lower than 6%:
 ```
-FT.SEARCH beerIdx @abv:"[5 6]"
+FT.SEARCH beerIdx "@abv:[5 6]"
 ```
 Breweries in a 10km radius of the coordinates of Chicago, IL USA:
 ```
