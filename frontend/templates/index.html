@@ -1,4 +1,5 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
     <style>
         table, th, td {
             border: 1px solid black;
@@ -32,15 +33,15 @@
         {% if rsindex and rsquery %}
         <table>
             <tr>
-                <th>RediSearch Index:</th>
+                <th scope="row">RediSearch Index:</th>
                 <td><code>{{ rsindex }}</code></td>
             </tr>
             <tr>
-                <th>RediSearch Query:</th>
+                <th scope="row">RediSearch Query:</th>
                 <td><code>{{ rsquery }}</code></td>
             </tr>
             <tr>
-                <th>redis-cli Command:</th>
+                <th scope="row">redis-cli Command:</th>
                 <td><code>FT.SEARCH {{ rsindex }} "{{ rsquery }}"</code></td>
             </tr>
         </table>
@@ -53,8 +54,7 @@
             {% for beer in result %}
             
             <tr>
-                <th>{{ beer['id'] }}</th>
-                
+                <th scope="row">{{ beer['id'] }}</th>
             </tr>
                 {% for k, v in beer.items() %}
                     {% if k != 'id' and k != 'payload' %}
