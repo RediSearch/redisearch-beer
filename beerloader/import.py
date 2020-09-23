@@ -114,6 +114,8 @@ def import_brewery_geo(r, rsclient):
                 rsclient.add_document(
                     "brewery:{}".format(row[1]),
                     score=1.0,
+                    replace=True,
+                    partial=True,
                     **ftaddfields
                 )
             except Exception as e:
