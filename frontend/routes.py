@@ -1,8 +1,7 @@
 from app import app
 from flask import render_template, Flask, g
-from redisearch import Client, Query
-# from app.forms import SearchForm
 import redis
+from redis.commands.search.query import Query
 
 def docs_to_dict(docs):
     reslist = []
@@ -21,14 +20,8 @@ def before_request():
         host=app.config['REDIS_HOST'],
         port=app.config['REDIS_PORT'],
     )
-    g.rsbeer = Client(
-        'beerIdx',
-        conn=g.redis
-    )
-    g.rsbrewery = Client(
-        'breweryIdx',
-        conn=g.redis
-    )
+    g.rsbeer = g.redis.ft("beerIdx")
+    g.rsbrewery = g.redis.ft("breweryIdx")
 
 @app.route('/')
 @app.route('/index')
