@@ -6,7 +6,12 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 import redis
 import csv
-from redisearch import Client, TextField, NumericField, TagField, GeoField
+from redis.commands.search.field import (
+    TextField,
+    NumericField,
+    TagField,
+    GeoField
+)
 
 load_dotenv()
 
@@ -232,8 +237,8 @@ def main():
     url = urlparse(args.url)
     r = redis.StrictRedis(host=url.hostname, port=url.port)
 
-    rsbeer = Client(ftbeeridx, conn=r)
-    rsbrewery = Client(ftbreweryidx, conn=r)
+    rsbeer = r.ft(ftbeeridx)
+    rsbrewery = r.ft(ftbreweryidx)
 
     for rsclient in [rsbeer, rsbrewery]:
         try:
@@ -243,7 +248,7 @@ def main():
 
 
         print("dropping index {}".format(cinfo['index_name']))
-        rsclient.drop_index()
+        rsclient.dropindex()
 
     print ("Importing categories...")
     import_csv(r, category, catfile)
