@@ -1,6 +1,6 @@
 [![Actions Status](https://github.com/RediSearch/redisearch-beer/workflows/CI/badge.svg)](https://github.com/RediSearch/redisearch-beer/actions)
 
-# rediseach-beer
+# redisearch-beer
 
 Demo for RediSearch using the https://openbeerdb.com/ dataset.
 
